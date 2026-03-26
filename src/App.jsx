@@ -1,9 +1,8 @@
+import { useEffect, useState } from "react";
 import * as d3 from "d3";
 import {
-  podcastData,
-  recommendations,
-  summaryMetrics,
-  topicPerformance,
+  fallbackDashboardData,
+  loadPodcastDashboardData,
 } from "./podcastData";
 import {
   AudienceMixChart,
@@ -14,16 +13,19 @@ import {
   TopicBarChart,
 } from "./charts";
 
-const topicColors = d3
-  .scaleOrdinal()
-  .domain(topicPerformance.map((d) => d.topic))
-  .range(["#ff6b3d", "#ffd166", "#06d6a0", "#118ab2", "#6c8cff", "#ef476f"]);
+const dataSourceLabels = {
+  "local-file": "Using bundled data/data.csv as fallback",
+  "local-file-fresh": "Using the local data/data.csv updated within the last 30 minutes",
+  "local-file-fallback": "Remote feed unavailable, using local data/data.csv",
+  "remote-cache": "Using cached remote data from the last 30 minutes",
+  "remote-url": "Using the remote CSV feed and syncing data/data.csv",
+};
 
-const metricCards = [
+const buildMetricCards = (summaryMetrics) => [
   {
     label: "Episodes analyzed",
     value: summaryMetrics.totalEpisodes.toString(),
-    detail: "Full history pulled from data/data.csv",
+    detail: "Full history available with remote fallback",
   },
   {
     label: "Total downloads",
@@ -42,7 +44,25 @@ const metricCards = [
   },
 ];
 
-const chartCards = [
+const buildHeroHighlights = (summaryMetrics) => [
+  {
+    label: "Catalog size",
+    value: summaryMetrics.totalEpisodes.toString(),
+    detail: "episodes analyzed end-to-end",
+  },
+  {
+    label: "Reach baseline",
+    value: summaryMetrics.totalDownloads.toLocaleString(),
+    detail: "total downloads across the dataset",
+  },
+  {
+    label: "Loyalty signal",
+    value: d3.format(".0%")(summaryMetrics.returningShare),
+    detail: "of listeners come back for more",
+  },
+];
+
+const chartCards = (podcastData, topicPerformance, topicColors) => [
   {
     title: "1. Growth trend",
     note: "Downloads and completed listens by episode reveal breakout periods and weak stretches.",
@@ -76,15 +96,64 @@ const chartCards = [
 ];
 
 export default function App() {
+  const [dashboardData, setDashboardData] = useState(fallbackDashboardData);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncData = async () => {
+      try {
+        const nextData = await loadPodcastDashboardData();
+        if (isMounted) {
+          setDashboardData(nextData);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    syncData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const { podcastData, recommendations, summaryMetrics, topicPerformance, source } = dashboardData;
+  const topicColors = d3
+    .scaleOrdinal()
+    .domain(topicPerformance.map((d) => d.topic))
+    .range(["#ff6b3d", "#ffd166", "#06d6a0", "#118ab2", "#6c8cff", "#ef476f"]);
+  const metricCards = buildMetricCards(summaryMetrics);
+  const heroHighlights = buildHeroHighlights(summaryMetrics);
+  const chartCardList = chartCards(podcastData, topicPerformance, topicColors);
+
   return (
     <main className="app-shell">
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">React 19 + D3 Podcast Dashboard</p>
-          <h1>Find what actually grows your show.</h1>
-          <p className="hero-text">
-            This dashboard reads <code>data/data.csv</code> directly and turns it into six charts focused on growth, retention, loyalty, conversion, and content strategy.
-          </p>
+          <div className="hero-copy__main">
+            <p className="eyebrow">React 19 + D3 Podcast Dashboard</p>
+            <h1>Find what actually grows your show.</h1>
+            <p className="hero-text">
+              This dashboard reads <code>data/data.csv</code> directly and turns it into six charts focused on growth, retention, loyalty, conversion, and content strategy.
+            </p>
+            <p className="hero-source">
+              {isLoading ? "Checking the remote CSV feed..." : dataSourceLabels[source]}
+            </p>
+          </div>
+          <div className="hero-highlights" aria-label="Podcast summary highlights">
+            {heroHighlights.map((item) => (
+              <article key={item.label} className="hero-highlight">
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <p>{item.detail}</p>
+              </article>
+            ))}
+          </div>
         </div>
         <div className="hero-panel">
           <h2>Editorial recommendations</h2>
@@ -110,7 +179,7 @@ export default function App() {
       </section>
 
       <section className="chart-grid">
-        {chartCards.map((card) => (
+        {chartCardList.map((card) => (
           <article key={card.title} className="chart-card">
             <div className="chart-card__header">
               <div>

@@ -1,6 +1,10 @@
 import * as d3 from "d3";
 import csvText from "../data/data.csv?raw";
 
+const REMOTE_SYNC_URL = "/api/podcast-data";
+const REMOTE_CACHE_KEY = "poddata:remote-csv-cache";
+const REMOTE_CACHE_TTL_MS = 30 * 60 * 1000;
+
 const topicRules = [
   { topic: "Machine Learning", match: /(machine learning|ml\b|predictive|personalized medicine|risk scoring|forecasting|fraud detection)/i },
   { topic: "Agents", match: /\bagent|autonomous|knowledge management|deployment pipelines|advertising spend|financial transactions/i },
@@ -32,49 +36,50 @@ const inferTopic = (title, description) => {
   return "Other";
 };
 
-export const podcastData = d3.csvParse(csvText, (row) => {
-  const downloads = Number(row.downloads);
-  const completionNumbers = Number(row.completion_numbers);
-  const newListeners = Number(row.new_listeners);
-  const returningListeners = Number(row.returning_listeners);
-  const subscribersGained = Number(row.subscribers_gained);
-  const socialShares = Number(row.social_media_shares);
-  const durationMinutes = parseDuration(row.duration);
-  const topic = inferTopic(row.title, row.description);
-  const isMultiGuest = /\sand\s|,/.test(row.guest);
+const parsePodcastData = (sourceCsvText) =>
+  d3.csvParse(sourceCsvText, (row) => {
+    const downloads = Number(row.downloads);
+    const completionNumbers = Number(row.completion_numbers);
+    const newListeners = Number(row.new_listeners);
+    const returningListeners = Number(row.returning_listeners);
+    const subscribersGained = Number(row.subscribers_gained);
+    const socialShares = Number(row.social_media_shares);
+    const durationMinutes = parseDuration(row.duration);
+    const topic = inferTopic(row.title, row.description);
+    const isMultiGuest = /\sand\s|,/.test(row.guest);
 
-  return {
-    episode: Number(row.episode),
-    title: row.title,
-    description: row.description,
-    guest: row.guest,
-    duration: row.duration,
-    durationMinutes,
-    durationBand: durationBand(durationMinutes),
-    topic,
-    downloads,
-    completionNumbers,
-    completionRate: completionNumbers / downloads,
-    newListeners,
-    returningListeners,
-    audienceTotal: newListeners + returningListeners,
-    newListenerShare: newListeners / (newListeners + returningListeners),
-    returningShare: returningListeners / (newListeners + returningListeners),
-    subscribersGained,
-    subscriberConversion: subscribersGained / downloads,
-    socialShares,
-    shareRate: socialShares / downloads,
-    efficiencyScore:
-      (completionNumbers * 0.35 +
-        subscribersGained * 14 +
-        socialShares * 2.5 +
-        returningListeners * 0.5) /
+    return {
+      episode: Number(row.episode),
+      title: row.title,
+      description: row.description,
+      guest: row.guest,
+      duration: row.duration,
+      durationMinutes,
+      durationBand: durationBand(durationMinutes),
+      topic,
       downloads,
-    guestType: isMultiGuest ? "Panel / multi-guest" : "Single guest",
-  };
-});
+      completionNumbers,
+      completionRate: completionNumbers / downloads,
+      newListeners,
+      returningListeners,
+      audienceTotal: newListeners + returningListeners,
+      newListenerShare: newListeners / (newListeners + returningListeners),
+      returningShare: returningListeners / (newListeners + returningListeners),
+      subscribersGained,
+      subscriberConversion: subscribersGained / downloads,
+      socialShares,
+      shareRate: socialShares / downloads,
+      efficiencyScore:
+        (completionNumbers * 0.35 +
+          subscribersGained * 14 +
+          socialShares * 2.5 +
+          returningListeners * 0.5) /
+        downloads,
+      guestType: isMultiGuest ? "Panel / multi-guest" : "Single guest",
+    };
+  });
 
-export const summaryMetrics = (() => {
+const buildSummaryMetrics = (podcastData) => {
   const totals = podcastData.reduce(
     (accumulator, episode) => {
       accumulator.downloads += episode.downloads;
@@ -104,54 +109,57 @@ export const summaryMetrics = (() => {
       totals.returningListeners / (totals.newListeners + totals.returningListeners),
     shareRate: totals.shares / totals.downloads,
   };
-})();
+};
 
-export const topicPerformance = d3
-  .rollups(
-    podcastData,
-    (episodes) => ({
-      episodes: episodes.length,
-      avgDownloads: d3.mean(episodes, (d) => d.downloads),
-      avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
-      avgSubscriberConversion: d3.mean(episodes, (d) => d.subscriberConversion),
-      avgShareRate: d3.mean(episodes, (d) => d.shareRate),
-    }),
-    (d) => d.topic,
-  )
-  .map(([topic, values]) => ({ topic, ...values }))
-  .sort((a, b) => d3.descending(a.avgDownloads, b.avgDownloads));
+const buildTopicPerformance = (podcastData) =>
+  d3
+    .rollups(
+      podcastData,
+      (episodes) => ({
+        episodes: episodes.length,
+        avgDownloads: d3.mean(episodes, (d) => d.downloads),
+        avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
+        avgSubscriberConversion: d3.mean(episodes, (d) => d.subscriberConversion),
+        avgShareRate: d3.mean(episodes, (d) => d.shareRate),
+      }),
+      (d) => d.topic,
+    )
+    .map(([topic, values]) => ({ topic, ...values }))
+    .sort((a, b) => d3.descending(a.avgDownloads, b.avgDownloads));
 
-export const durationPerformance = d3
-  .rollups(
-    podcastData,
-    (episodes) => ({
-      episodes: episodes.length,
-      avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
-      avgDownloads: d3.mean(episodes, (d) => d.downloads),
-    }),
-    (d) => d.durationBand,
-  )
-  .map(([band, values]) => ({ band, ...values }))
-  .sort((a, b) => {
-    const order = ["<29 min", "29-31 min", "31-33 min", "33+ min"];
-    return order.indexOf(a.band) - order.indexOf(b.band);
-  });
+const buildDurationPerformance = (podcastData) =>
+  d3
+    .rollups(
+      podcastData,
+      (episodes) => ({
+        episodes: episodes.length,
+        avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
+        avgDownloads: d3.mean(episodes, (d) => d.downloads),
+      }),
+      (d) => d.durationBand,
+    )
+    .map(([band, values]) => ({ band, ...values }))
+    .sort((a, b) => {
+      const order = ["<29 min", "29-31 min", "31-33 min", "33+ min"];
+      return order.indexOf(a.band) - order.indexOf(b.band);
+    });
 
-export const guestPerformance = d3
-  .rollups(
-    podcastData,
-    (episodes) => ({
-      episodes: episodes.length,
-      avgDownloads: d3.mean(episodes, (d) => d.downloads),
-      avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
-      avgSubscriberConversion: d3.mean(episodes, (d) => d.subscriberConversion),
-    }),
-    (d) => d.guestType,
-  )
-  .map(([guestType, values]) => ({ guestType, ...values }))
-  .sort((a, b) => d3.descending(a.avgDownloads, b.avgDownloads));
+const buildGuestPerformance = (podcastData) =>
+  d3
+    .rollups(
+      podcastData,
+      (episodes) => ({
+        episodes: episodes.length,
+        avgDownloads: d3.mean(episodes, (d) => d.downloads),
+        avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
+        avgSubscriberConversion: d3.mean(episodes, (d) => d.subscriberConversion),
+      }),
+      (d) => d.guestType,
+    )
+    .map(([guestType, values]) => ({ guestType, ...values }))
+    .sort((a, b) => d3.descending(a.avgDownloads, b.avgDownloads));
 
-export const recommendations = (() => {
+const buildRecommendations = (podcastData, topicPerformance, durationPerformance, guestPerformance) => {
   const bestTopic = topicPerformance[0];
   const bestRetentionBand = durationPerformance.reduce((best, current) =>
     current.avgCompletionRate > best.avgCompletionRate ? current : best,
@@ -195,4 +203,95 @@ export const recommendations = (() => {
       detail: `${d3.format(".0%")(topRetentionTopic.avgCompletionRate)} average completion suggests these episodes keep listeners around longest.`,
     },
   ];
-})();
+};
+
+const buildDashboardData = (sourceCsvText, source) => {
+  const podcastData = parsePodcastData(sourceCsvText);
+  const summaryMetrics = buildSummaryMetrics(podcastData);
+  const topicPerformance = buildTopicPerformance(podcastData);
+  const durationPerformance = buildDurationPerformance(podcastData);
+  const guestPerformance = buildGuestPerformance(podcastData);
+  const recommendations = buildRecommendations(
+    podcastData,
+    topicPerformance,
+    durationPerformance,
+    guestPerformance,
+  );
+
+  return {
+    podcastData,
+    recommendations,
+    summaryMetrics,
+    topicPerformance,
+    durationPerformance,
+    guestPerformance,
+    source,
+  };
+};
+
+const readRemoteCache = () => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(REMOTE_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.csvText || !parsed?.fetchedAt) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeRemoteCache = (remoteCsvText) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      REMOTE_CACHE_KEY,
+      JSON.stringify({
+        csvText: remoteCsvText,
+        fetchedAt: Date.now(),
+      }),
+    );
+  } catch {
+    // Ignore cache write failures and keep the app usable.
+  }
+};
+
+const fetchRemoteCsv = async () => {
+  const response = await fetch(REMOTE_SYNC_URL, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Remote CSV request failed with status ${response.status}`);
+  }
+
+  const remoteCsvText = await response.text();
+  if (!remoteCsvText.trim()) {
+    throw new Error("Remote CSV response was empty");
+  }
+
+  return {
+    csvText: remoteCsvText,
+    source: response.headers.get("X-Poddata-Source") ?? "remote-url",
+  };
+};
+
+export async function loadPodcastDashboardData() {
+  const fallbackData = buildDashboardData(csvText, "local-file");
+  const cachedRemote = readRemoteCache();
+
+  if (cachedRemote && Date.now() - cachedRemote.fetchedAt < REMOTE_CACHE_TTL_MS) {
+    return buildDashboardData(cachedRemote.csvText, "remote-cache");
+  }
+
+  try {
+    const remoteResult = await fetchRemoteCsv();
+    writeRemoteCache(remoteResult.csvText);
+    return buildDashboardData(remoteResult.csvText, remoteResult.source);
+  } catch {
+    return fallbackData;
+  }
+}
+
+export const fallbackDashboardData = buildDashboardData(csvText, "local-file");
