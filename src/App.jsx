@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import * as d3 from "d3";
 import {
-  fallbackDashboardData,
-  loadPodcastDashboardData,
-} from "./podcastData";
-import {
   AudienceMixChart,
   ConversionBubbleChart,
   ConversionRankingChart,
@@ -12,92 +8,203 @@ import {
   RetentionScatterChart,
   TopicBarChart,
 } from "./charts";
+import {
+  createFormatters,
+  DEFAULT_LOCALE,
+  getLocaleCopy,
+  LOCALE_STORAGE_KEY,
+  SUPPORTED_LOCALES,
+} from "./i18n";
+import { fallbackDashboardData, loadPodcastDashboardData } from "./podcastData";
 
-const dataSourceLabels = {
-  "local-file": "Using bundled data/data.csv as fallback",
-  "local-file-fresh": "Using the local data/data.csv updated within the last 30 minutes",
-  "local-file-fallback": "Remote feed unavailable, using local data/data.csv",
-  "remote-cache": "Using cached remote data from the last 30 minutes",
-  "remote-url": "Using the remote CSV feed and syncing data/data.csv",
+const buildMetricCards = (summaryMetrics, copy, formatters) => [
+  {
+    label: copy.metrics.episodesAnalyzed.label,
+    value: formatters.number(summaryMetrics.totalEpisodes),
+    detail: copy.metrics.episodesAnalyzed.detail,
+  },
+  {
+    label: copy.metrics.totalDownloads.label,
+    value: formatters.number(summaryMetrics.totalDownloads),
+    detail: copy.metrics.totalDownloads.detail,
+  },
+  {
+    label: copy.metrics.averageCompletion.label,
+    value: formatters.percent(summaryMetrics.avgCompletionRate),
+    detail: copy.metrics.averageCompletion.detail,
+  },
+  {
+    label: copy.metrics.subscriberConversion.label,
+    value: formatters.percent(summaryMetrics.subscriberConversion, 1),
+    detail: copy.metrics.subscriberConversion.detail,
+  },
+];
+
+const buildHeroHighlights = (summaryMetrics, copy, formatters) => [
+  {
+    label: copy.hero.highlights.catalogSize.label,
+    value: formatters.number(summaryMetrics.totalEpisodes),
+    detail: copy.hero.highlights.catalogSize.detail,
+  },
+  {
+    label: copy.hero.highlights.reachBaseline.label,
+    value: formatters.number(summaryMetrics.totalDownloads),
+    detail: copy.hero.highlights.reachBaseline.detail,
+  },
+  {
+    label: copy.hero.highlights.loyaltySignal.label,
+    value: formatters.percent(summaryMetrics.returningShare),
+    detail: copy.hero.highlights.loyaltySignal.detail,
+  },
+];
+
+const buildRecommendations = (recommendationInsights, copy, formatters, locale) => {
+  const topicLabel = (topic) => copy.taxonomy.topics[topic] ?? topic;
+  const durationBandLabel = (band) => copy.taxonomy.durationBands[band] ?? band;
+  const guestTypeLabel = (guestType) => copy.taxonomy.guestTypes[guestType] ?? guestType;
+  const lowerGuestTypeLabel = guestTypeLabel(
+    recommendationInsights.bestGuestFormat.guestType,
+  ).toLocaleLowerCase(locale);
+
+  return [
+    {
+      title: copy.recommendations.doubleDownOnTopic.title(
+        topicLabel(recommendationInsights.bestTopic.topic),
+      ),
+      detail: copy.recommendations.doubleDownOnTopic.detail(
+        formatters.number(Math.round(recommendationInsights.bestTopic.avgDownloads)),
+      ),
+    },
+    {
+      title: copy.recommendations.keepCoreFormat.title(
+        durationBandLabel(recommendationInsights.bestRetentionBand.band),
+      ),
+      detail: copy.recommendations.keepCoreFormat.detail(
+        formatters.percent(recommendationInsights.bestRetentionBand.avgCompletionRate),
+      ),
+    },
+    {
+      title: copy.recommendations.leanIntoGuestFormat.title(lowerGuestTypeLabel),
+      detail: copy.recommendations.leanIntoGuestFormat.detail(
+        formatters.percent(
+          recommendationInsights.bestGuestFormat.avgSubscriberConversion,
+          1,
+        ),
+      ),
+    },
+    {
+      title: copy.recommendations.reuseStrongestEpisode.title(
+        recommendationInsights.strongestEpisode.episode,
+      ),
+      detail: copy.recommendations.reuseStrongestEpisode.detail(
+        recommendationInsights.strongestEpisode.title,
+      ),
+    },
+    {
+      title: copy.recommendations.promoteShareLeader.title(
+        recommendationInsights.topShareEpisode.episode,
+      ),
+      detail: copy.recommendations.promoteShareLeader.detail(
+        recommendationInsights.topShareEpisode.title,
+      ),
+    },
+    {
+      title: copy.recommendations.deepenLoyalty.title(
+        topicLabel(recommendationInsights.topRetentionTopic.topic),
+      ),
+      detail: copy.recommendations.deepenLoyalty.detail(
+        formatters.percent(recommendationInsights.topRetentionTopic.avgCompletionRate),
+      ),
+    },
+  ];
 };
 
-const buildMetricCards = (summaryMetrics) => [
+const buildChartCards = (podcastData, topicPerformance, topicColors, copy, formatters) => [
   {
-    label: "Episodes analyzed",
-    value: summaryMetrics.totalEpisodes.toString(),
-    detail: "Full history available with remote fallback",
+    title: copy.charts.growthTrend.title,
+    note: copy.charts.growthTrend.note,
+    component: (
+      <PerformanceTrendChart
+        data={podcastData}
+        labels={copy.charts.growthTrend}
+        formatters={formatters}
+      />
+    ),
   },
   {
-    label: "Total downloads",
-    value: summaryMetrics.totalDownloads.toLocaleString(),
-    detail: "Use this as your reach baseline",
+    title: copy.charts.retentionScatter.title,
+    note: copy.charts.retentionScatter.note,
+    component: (
+      <RetentionScatterChart
+        data={podcastData}
+        colors={topicColors}
+        labels={copy.charts.retentionScatter}
+        formatters={formatters}
+      />
+    ),
   },
   {
-    label: "Average completion",
-    value: d3.format(".0%")(summaryMetrics.avgCompletionRate),
-    detail: "Retention across the full catalog",
+    title: copy.charts.audienceMix.title,
+    note: copy.charts.audienceMix.note,
+    component: (
+      <AudienceMixChart
+        data={podcastData}
+        labels={copy.charts.audienceMix}
+        formatters={formatters}
+      />
+    ),
   },
   {
-    label: "Subscriber conversion",
-    value: d3.format(".1%")(summaryMetrics.subscriberConversion),
-    detail: "Subscribers gained per download",
+    title: copy.charts.topicLeaderboard.title,
+    note: copy.charts.topicLeaderboard.note,
+    component: (
+      <TopicBarChart
+        data={topicPerformance}
+        colors={topicColors}
+        labels={copy.charts.topicLeaderboard}
+        formatters={formatters}
+        getTopicLabel={(topic) => copy.taxonomy.topics[topic] ?? topic}
+      />
+    ),
+  },
+  {
+    title: copy.charts.shareToSubscribers.title,
+    note: copy.charts.shareToSubscribers.note,
+    component: (
+      <ConversionBubbleChart
+        data={podcastData}
+        colors={topicColors}
+        labels={copy.charts.shareToSubscribers}
+        formatters={formatters}
+      />
+    ),
+  },
+  {
+    title: copy.charts.bestConversionEpisodes.title,
+    note: copy.charts.bestConversionEpisodes.note,
+    component: (
+      <ConversionRankingChart
+        data={podcastData}
+        labels={copy.charts.bestConversionEpisodes}
+        formatters={formatters}
+      />
+    ),
   },
 ];
 
-const buildHeroHighlights = (summaryMetrics) => [
-  {
-    label: "Catalog size",
-    value: summaryMetrics.totalEpisodes.toString(),
-    detail: "episodes analyzed end-to-end",
-  },
-  {
-    label: "Reach baseline",
-    value: summaryMetrics.totalDownloads.toLocaleString(),
-    detail: "total downloads across the dataset",
-  },
-  {
-    label: "Loyalty signal",
-    value: d3.format(".0%")(summaryMetrics.returningShare),
-    detail: "of listeners come back for more",
-  },
-];
+const readPreferredLocale = () => {
+  if (typeof window === "undefined") return DEFAULT_LOCALE;
 
-const chartCards = (podcastData, topicPerformance, topicColors) => [
-  {
-    title: "1. Growth trend",
-    note: "Downloads and completed listens by episode reveal breakout periods and weak stretches.",
-    component: <PerformanceTrendChart data={podcastData} />,
-  },
-  {
-    title: "2. Length vs retention",
-    note: "This scatter plot helps you find the duration range that keeps listeners engaged without sacrificing reach.",
-    component: <RetentionScatterChart data={podcastData} colors={topicColors} />,
-  },
-  {
-    title: "3. Audience mix",
-    note: "A stacked view of the latest 12 episodes shows whether recent growth comes from discovery or loyal listeners.",
-    component: <AudienceMixChart data={podcastData} />,
-  },
-  {
-    title: "4. Topic leaderboard",
-    note: "Average downloads by theme tell you which editorial lanes deserve more frequency.",
-    component: <TopicBarChart data={topicPerformance} colors={topicColors} />,
-  },
-  {
-    title: "5. Shares to subscribers",
-    note: "Episodes in the upper-right corner are your best candidates for clip distribution and promotion.",
-    component: <ConversionBubbleChart data={podcastData} colors={topicColors} />,
-  },
-  {
-    title: "6. Best conversion episodes",
-    note: "This ranking isolates the episodes that turn attention into subscribers most effectively.",
-    component: <ConversionRankingChart data={podcastData} />,
-  },
-];
+  const storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+  return SUPPORTED_LOCALES.some((item) => item.id === storedLocale)
+    ? storedLocale
+    : DEFAULT_LOCALE;
+};
 
 export default function App() {
   const [dashboardData, setDashboardData] = useState(fallbackDashboardData);
   const [isLoading, setIsLoading] = useState(true);
+  const [locale, setLocale] = useState(readPreferredLocale);
 
   useEffect(() => {
     let isMounted = true;
@@ -122,30 +229,84 @@ export default function App() {
     };
   }, []);
 
-  const { podcastData, recommendations, summaryMetrics, topicPerformance, source } = dashboardData;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    document.documentElement.lang = locale;
+  }, [locale]);
+
+  const { podcastData, recommendationInsights, summaryMetrics, topicPerformance, source } =
+    dashboardData;
+  const copy = getLocaleCopy(locale);
+  const formatters = createFormatters(locale);
   const topicColors = d3
     .scaleOrdinal()
-    .domain(topicPerformance.map((d) => d.topic))
+    .domain(topicPerformance.map((item) => item.topic))
     .range(["#ff6b3d", "#ffd166", "#06d6a0", "#118ab2", "#6c8cff", "#ef476f"]);
-  const metricCards = buildMetricCards(summaryMetrics);
-  const heroHighlights = buildHeroHighlights(summaryMetrics);
-  const chartCardList = chartCards(podcastData, topicPerformance, topicColors);
+  const metricCards = buildMetricCards(summaryMetrics, copy, formatters);
+  const heroHighlights = buildHeroHighlights(summaryMetrics, copy, formatters);
+  const recommendations = buildRecommendations(
+    recommendationInsights,
+    copy,
+    formatters,
+    locale,
+  );
+  const chartCardList = buildChartCards(
+    podcastData,
+    topicPerformance,
+    topicColors,
+    copy,
+    formatters,
+  );
 
   return (
     <main className="app-shell">
+      <header className="app-toolbar">
+        <div>
+          <p className="app-toolbar__eyebrow">{copy.toolbar.eyebrow}</p>
+          <h2 className="app-toolbar__title">{copy.toolbar.title}</h2>
+        </div>
+        <div className="language-switcher">
+          <span>{copy.languageSwitcher.label}</span>
+          <div
+            className="language-switcher__controls"
+            role="group"
+            aria-label={copy.languageSwitcher.ariaLabel}
+          >
+            {SUPPORTED_LOCALES.map((language) => (
+              <button
+                key={language.id}
+                type="button"
+                className={
+                  language.id === locale
+                    ? "language-switcher__button is-active"
+                    : "language-switcher__button"
+                }
+                onClick={() => setLocale(language.id)}
+              >
+                {language.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
       <section className="hero">
         <div className="hero-copy">
           <div className="hero-copy__main">
-            <p className="eyebrow">React 19 + D3 Podcast Dashboard</p>
-            <h1>Find what actually grows your show.</h1>
+            <p className="eyebrow">{copy.hero.eyebrow}</p>
+            <h1>{copy.hero.title}</h1>
             <p className="hero-text">
-              This dashboard reads <code>data/data.csv</code> directly and turns it into six charts focused on growth, retention, loyalty, conversion, and content strategy.
+              {copy.hero.description.beforeCode}
+              <code>data/data.csv</code>
+              {copy.hero.description.afterCode}
             </p>
             <p className="hero-source">
-              {isLoading ? "Checking the remote CSV feed..." : dataSourceLabels[source]}
+              {isLoading ? copy.sourceLabels.loading : copy.sourceLabels[source]}
             </p>
           </div>
-          <div className="hero-highlights" aria-label="Podcast summary highlights">
+          <div className="hero-highlights" aria-label={copy.hero.highlightsAriaLabel}>
             {heroHighlights.map((item) => (
               <article key={item.label} className="hero-highlight">
                 <span>{item.label}</span>
@@ -156,7 +317,7 @@ export default function App() {
           </div>
         </div>
         <div className="hero-panel">
-          <h2>Editorial recommendations</h2>
+          <h2>{copy.recommendations.heading}</h2>
           <div className="recommendation-list">
             {recommendations.map((item) => (
               <article key={item.title} className="recommendation-card">

@@ -6,12 +6,32 @@ const REMOTE_CACHE_KEY = "poddata:remote-csv-cache";
 const REMOTE_CACHE_TTL_MS = 30 * 60 * 1000;
 
 const topicRules = [
-  { topic: "Machine Learning", match: /(machine learning|ml\b|predictive|personalized medicine|risk scoring|forecasting|fraud detection)/i },
-  { topic: "Agents", match: /\bagent|autonomous|knowledge management|deployment pipelines|advertising spend|financial transactions/i },
-  { topic: "Robotics", match: /robotics?|robot\b|warehouse|agricultural|surgery|space exploration/i },
-  { topic: "Cybersecurity", match: /cyber|phishing|fraud|threat|smart homes|log analysis|attacks/i },
-  { topic: "Cloud & Infrastructure", match: /cloud|outages|edge computing|reliability|supply chain visibility/i },
-  { topic: "Automation", match: /automation|automated|scheduling|transport|workflow|public transport/i },
+  {
+    topic: "Machine Learning",
+    match:
+      /(machine learning|ml\b|predictive|personalized medicine|risk scoring|forecasting|fraud detection)/i,
+  },
+  {
+    topic: "Agents",
+    match:
+      /\bagent|autonomous|knowledge management|deployment pipelines|advertising spend|financial transactions/i,
+  },
+  {
+    topic: "Robotics",
+    match: /robotics?|robot\b|warehouse|agricultural|surgery|space exploration/i,
+  },
+  {
+    topic: "Cybersecurity",
+    match: /cyber|phishing|fraud|threat|smart homes|log analysis|attacks/i,
+  },
+  {
+    topic: "Cloud & Infrastructure",
+    match: /cloud|outages|edge computing|reliability|supply chain visibility/i,
+  },
+  {
+    topic: "Automation",
+    match: /automation|automated|scheduling|transport|workflow|public transport/i,
+  },
 ];
 
 const durationBand = (minutes) => {
@@ -117,15 +137,18 @@ const buildTopicPerformance = (podcastData) =>
       podcastData,
       (episodes) => ({
         episodes: episodes.length,
-        avgDownloads: d3.mean(episodes, (d) => d.downloads),
-        avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
-        avgSubscriberConversion: d3.mean(episodes, (d) => d.subscriberConversion),
-        avgShareRate: d3.mean(episodes, (d) => d.shareRate),
+        avgDownloads: d3.mean(episodes, (item) => item.downloads),
+        avgCompletionRate: d3.mean(episodes, (item) => item.completionRate),
+        avgSubscriberConversion: d3.mean(
+          episodes,
+          (item) => item.subscriberConversion,
+        ),
+        avgShareRate: d3.mean(episodes, (item) => item.shareRate),
       }),
-      (d) => d.topic,
+      (item) => item.topic,
     )
     .map(([topic, values]) => ({ topic, ...values }))
-    .sort((a, b) => d3.descending(a.avgDownloads, b.avgDownloads));
+    .sort((left, right) => d3.descending(left.avgDownloads, right.avgDownloads));
 
 const buildDurationPerformance = (podcastData) =>
   d3
@@ -133,15 +156,15 @@ const buildDurationPerformance = (podcastData) =>
       podcastData,
       (episodes) => ({
         episodes: episodes.length,
-        avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
-        avgDownloads: d3.mean(episodes, (d) => d.downloads),
+        avgCompletionRate: d3.mean(episodes, (item) => item.completionRate),
+        avgDownloads: d3.mean(episodes, (item) => item.downloads),
       }),
-      (d) => d.durationBand,
+      (item) => item.durationBand,
     )
     .map(([band, values]) => ({ band, ...values }))
-    .sort((a, b) => {
+    .sort((left, right) => {
       const order = ["<29 min", "29-31 min", "31-33 min", "33+ min"];
-      return order.indexOf(a.band) - order.indexOf(b.band);
+      return order.indexOf(left.band) - order.indexOf(right.band);
     });
 
 const buildGuestPerformance = (podcastData) =>
@@ -150,16 +173,24 @@ const buildGuestPerformance = (podcastData) =>
       podcastData,
       (episodes) => ({
         episodes: episodes.length,
-        avgDownloads: d3.mean(episodes, (d) => d.downloads),
-        avgCompletionRate: d3.mean(episodes, (d) => d.completionRate),
-        avgSubscriberConversion: d3.mean(episodes, (d) => d.subscriberConversion),
+        avgDownloads: d3.mean(episodes, (item) => item.downloads),
+        avgCompletionRate: d3.mean(episodes, (item) => item.completionRate),
+        avgSubscriberConversion: d3.mean(
+          episodes,
+          (item) => item.subscriberConversion,
+        ),
       }),
-      (d) => d.guestType,
+      (item) => item.guestType,
     )
     .map(([guestType, values]) => ({ guestType, ...values }))
-    .sort((a, b) => d3.descending(a.avgDownloads, b.avgDownloads));
+    .sort((left, right) => d3.descending(left.avgDownloads, right.avgDownloads));
 
-const buildRecommendations = (podcastData, topicPerformance, durationPerformance, guestPerformance) => {
+const buildRecommendationInsights = (
+  podcastData,
+  topicPerformance,
+  durationPerformance,
+  guestPerformance,
+) => {
   const bestTopic = topicPerformance[0];
   const bestRetentionBand = durationPerformance.reduce((best, current) =>
     current.avgCompletionRate > best.avgCompletionRate ? current : best,
@@ -167,42 +198,24 @@ const buildRecommendations = (podcastData, topicPerformance, durationPerformance
   const bestGuestFormat = guestPerformance.reduce((best, current) =>
     current.avgSubscriberConversion > best.avgSubscriberConversion ? current : best,
   );
-  const strongestEpisode = [...podcastData].sort((a, b) =>
-    d3.descending(a.efficiencyScore, b.efficiencyScore),
+  const strongestEpisode = [...podcastData].sort((left, right) =>
+    d3.descending(left.efficiencyScore, right.efficiencyScore),
   )[0];
-  const topShareEpisode = [...podcastData].sort((a, b) =>
-    d3.descending(a.shareRate, b.shareRate),
+  const topShareEpisode = [...podcastData].sort((left, right) =>
+    d3.descending(left.shareRate, right.shareRate),
   )[0];
-  const topRetentionTopic = [...topicPerformance].sort((a, b) =>
-    d3.descending(a.avgCompletionRate, b.avgCompletionRate),
+  const topRetentionTopic = [...topicPerformance].sort((left, right) =>
+    d3.descending(left.avgCompletionRate, right.avgCompletionRate),
   )[0];
 
-  return [
-    {
-      title: `Double down on ${bestTopic.topic}`,
-      detail: `${Math.round(bestTopic.avgDownloads).toLocaleString()} average downloads per episode makes it your strongest reach category.`,
-    },
-    {
-      title: `Keep the core format around ${bestRetentionBand.band}`,
-      detail: `${d3.format(".0%")(bestRetentionBand.avgCompletionRate)} average completion is the best retention band in the dataset.`,
-    },
-    {
-      title: `Lean into ${bestGuestFormat.guestType.toLowerCase()} episodes for conversion`,
-      detail: `${d3.format(".1%")(bestGuestFormat.avgSubscriberConversion)} subscriber conversion outperforms the alternative guest format.`,
-    },
-    {
-      title: `Reuse the playbook from episode ${strongestEpisode.episode}`,
-      detail: `"${strongestEpisode.title}" leads the blended efficiency score across completion, subscribers, shares, and loyal listeners.`,
-    },
-    {
-      title: `Promote episodes that behave like episode ${topShareEpisode.episode}`,
-      detail: `"${topShareEpisode.title}" has the best sharing rate, which is a useful signal for clips and social-first campaigns.`,
-    },
-    {
-      title: `Use ${topRetentionTopic.topic} topics to deepen loyalty`,
-      detail: `${d3.format(".0%")(topRetentionTopic.avgCompletionRate)} average completion suggests these episodes keep listeners around longest.`,
-    },
-  ];
+  return {
+    bestTopic,
+    bestRetentionBand,
+    bestGuestFormat,
+    strongestEpisode,
+    topShareEpisode,
+    topRetentionTopic,
+  };
 };
 
 const buildDashboardData = (sourceCsvText, source) => {
@@ -211,7 +224,7 @@ const buildDashboardData = (sourceCsvText, source) => {
   const topicPerformance = buildTopicPerformance(podcastData);
   const durationPerformance = buildDurationPerformance(podcastData);
   const guestPerformance = buildGuestPerformance(podcastData);
-  const recommendations = buildRecommendations(
+  const recommendationInsights = buildRecommendationInsights(
     podcastData,
     topicPerformance,
     durationPerformance,
@@ -220,7 +233,7 @@ const buildDashboardData = (sourceCsvText, source) => {
 
   return {
     podcastData,
-    recommendations,
+    recommendationInsights,
     summaryMetrics,
     topicPerformance,
     durationPerformance,
