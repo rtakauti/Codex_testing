@@ -201,6 +201,14 @@ const readPreferredLocale = () => {
     : DEFAULT_LOCALE;
 };
 
+export const appTestUtils = {
+  buildMetricCards,
+  buildHeroHighlights,
+  buildRecommendations,
+  buildChartCards,
+  readPreferredLocale,
+};
+
 export default function App() {
   const [dashboardData, setDashboardData] = useState(fallbackDashboardData);
   const [isLoading, setIsLoading] = useState(true);

@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import istanbul from "vite-plugin-istanbul";
 import { syncPodcastCsv } from "./scripts/podcastCsvSync.js";
 
 const podcastDataSyncPlugin = () => {
@@ -30,5 +31,14 @@ const podcastDataSyncPlugin = () => {
 };
 
 export default defineConfig({
-  plugins: [react(), podcastDataSyncPlugin()],
+  plugins: [
+    react(),
+    istanbul({
+      include: ["src/**/*.js", "src/**/*.jsx"],
+      extension: [".js", ".jsx"],
+      requireEnv: false,
+      forceBuildInstrument: true,
+    }),
+    podcastDataSyncPlugin(),
+  ],
 });

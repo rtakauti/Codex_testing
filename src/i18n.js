@@ -2,7 +2,7 @@ export const DEFAULT_LOCALE = "en";
 export const LOCALE_STORAGE_KEY = "poddata:locale";
 export const SUPPORTED_LOCALES = [
   { id: "en", label: "English" },
-  { id: "pt-BR", label: "Português (Brasil)" },
+  { id: "pt-BR", label: "Portugu\u00eas (Brasil)" },
 ];
 
 const translations = {
@@ -163,26 +163,26 @@ const translations = {
   },
   "pt-BR": {
     toolbar: {
-      eyebrow: "Idioma da aplicação",
+      eyebrow: "Idioma da aplica\u00e7\u00e3o",
       title: "Dashboard de analytics para podcast",
     },
     languageSwitcher: {
       label: "Trocar idioma",
-      ariaLabel: "Seletor de idioma da aplicação",
+      ariaLabel: "Seletor de idioma da aplica\u00e7\u00e3o",
     },
     hero: {
       eyebrow: "Dashboard de Podcast com React 19 + D3",
       title: "Descubra o que realmente faz seu podcast crescer.",
       description: {
-        beforeCode: "Este dashboard lê ",
+        beforeCode: "Este dashboard l\u00ea ",
         afterCode:
-          " diretamente e transforma o arquivo em seis gráficos focados em crescimento, retenção, lealdade, conversão e estratégia de conteúdo.",
+          " diretamente e transforma o arquivo em seis gr\u00e1ficos focados em crescimento, reten\u00e7\u00e3o, lealdade, convers\u00e3o e estrat\u00e9gia de conte\u00fado.",
       },
       highlightsAriaLabel: "Destaques do resumo do podcast",
       highlights: {
         catalogSize: {
-          label: "Tamanho do catálogo",
-          detail: "episódios analisados de ponta a ponta",
+          label: "Tamanho do cat\u00e1logo",
+          detail: "epis\u00f3dios analisados de ponta a ponta",
         },
         reachBaseline: {
           label: "Base de alcance",
@@ -196,19 +196,19 @@ const translations = {
     },
     metrics: {
       episodesAnalyzed: {
-        label: "Episódios analisados",
-        detail: "Histórico completo com fallback remoto",
+        label: "Epis\u00f3dios analisados",
+        detail: "Hist\u00f3rico completo com fallback remoto",
       },
       totalDownloads: {
         label: "Downloads totais",
         detail: "Use isso como sua base de alcance",
       },
       averageCompletion: {
-        label: "Conclusão média",
-        detail: "Retenção em todo o catálogo",
+        label: "Conclus\u00e3o m\u00e9dia",
+        detail: "Reten\u00e7\u00e3o em todo o cat\u00e1logo",
       },
       subscriberConversion: {
-        label: "Conversão em inscritos",
+        label: "Convers\u00e3o em inscritos",
         detail: "Inscritos ganhos por download",
       },
     },
@@ -216,97 +216,98 @@ const translations = {
       loading: "Verificando o feed remoto de CSV...",
       "local-file": "Usando data/data.csv embutido como fallback",
       "local-file-fresh":
-        "Usando o data/data.csv local atualizado nos últimos 30 minutos",
+        "Usando o data/data.csv local atualizado nos \u00faltimos 30 minutos",
       "local-file-fallback":
-        "Feed remoto indisponível, usando o data/data.csv local",
-      "remote-cache": "Usando dados remotos em cache dos últimos 30 minutos",
+        "Feed remoto indispon\u00edvel, usando o data/data.csv local",
+      "remote-cache": "Usando dados remotos em cache dos \u00faltimos 30 minutos",
       "remote-url": "Usando o feed CSV remoto e sincronizando data/data.csv",
     },
     recommendations: {
-      heading: "Recomendações editoriais",
+      heading: "Recomenda\u00e7\u00f5es editoriais",
       doubleDownOnTopic: {
         title: (topic) => `Aposte mais em ${topic}`,
         detail: (downloads) =>
-          `${downloads} downloads médios por episódio fazem dessa a categoria com maior alcance.`,
+          `${downloads} downloads m\u00e9dios por epis\u00f3dio fazem dessa a categoria com maior alcance.`,
       },
       keepCoreFormat: {
         title: (band) => `Mantenha o formato principal em torno de ${band}`,
         detail: (completionRate) =>
-          `${completionRate} de conclusão média colocam essa faixa como a melhor retenção do conjunto.`,
+          `${completionRate} de conclus\u00e3o m\u00e9dia colocam essa faixa como a melhor reten\u00e7\u00e3o do conjunto.`,
       },
       leanIntoGuestFormat: {
-        title: (guestType) => `Priorize episódios com ${guestType} para conversão`,
+        title: (guestType) => `Priorize epis\u00f3dios com ${guestType} para convers\u00e3o`,
         detail: (conversionRate) =>
-          `${conversionRate} de conversão em inscritos supera o formato alternativo de convidados.`,
+          `${conversionRate} de convers\u00e3o em inscritos supera o formato alternativo de convidados.`,
       },
       reuseStrongestEpisode: {
-        title: (episode) => `Reaproveite a fórmula do episódio ${episode}`,
+        title: (episode) => `Reaproveite a f\u00f3rmula do epis\u00f3dio ${episode}`,
         detail: (title) =>
-          `"${title}" lidera o score combinado de conclusão, inscritos, compartilhamentos e ouvintes fiéis.`,
+          `"${title}" lidera o score combinado de conclus\u00e3o, inscritos, compartilhamentos e ouvintes fi\u00e9is.`,
       },
       promoteShareLeader: {
-        title: (episode) => `Promova episódios com comportamento parecido com o episódio ${episode}`,
+        title: (episode) =>
+          `Promova epis\u00f3dios com comportamento parecido com o epis\u00f3dio ${episode}`,
         detail: (title) =>
-          `"${title}" tem a melhor taxa de compartilhamento, um sinal útil para cortes e campanhas sociais.`,
+          `"${title}" tem a melhor taxa de compartilhamento, um sinal \u00fatil para cortes e campanhas sociais.`,
       },
       deepenLoyalty: {
         title: (topic) => `Use temas de ${topic} para aprofundar a lealdade`,
         detail: (completionRate) =>
-          `${completionRate} de conclusão média sugerem que esses episódios retêm ouvintes por mais tempo.`,
+          `${completionRate} de conclus\u00e3o m\u00e9dia sugerem que esses epis\u00f3dios ret\u00eam ouvintes por mais tempo.`,
       },
     },
     charts: {
       growthTrend: {
-        title: "1. Tendência de crescimento",
-        note: "Downloads e escutas concluídas por episódio revelam períodos de aceleração e fases mais fracas.",
-        ariaLabel: "Gráfico de tendência de crescimento",
+        title: "1. Tend\u00eancia de crescimento",
+        note: "Downloads e escutas conclu\u00eddas por epis\u00f3dio revelam per\u00edodos de acelera\u00e7\u00e3o e fases mais fracas.",
+        ariaLabel: "Gr\u00e1fico de tend\u00eancia de crescimento",
         downloadsLegend: "Downloads",
-        completedLegend: "Escutas concluídas",
+        completedLegend: "Escutas conclu\u00eddas",
       },
       retentionScatter: {
-        title: "2. Duração x retenção",
-        note: "Este gráfico de dispersão ajuda a encontrar a faixa de duração que mantém o público engajado sem sacrificar alcance.",
-        ariaLabel: "Gráfico de dispersão de duração versus retenção",
-        durationAxis: "Duração (minutos)",
-        completionAxis: "Taxa de conclusão",
+        title: "2. Dura\u00e7\u00e3o x reten\u00e7\u00e3o",
+        note: "Este gr\u00e1fico de dispers\u00e3o ajuda a encontrar a faixa de dura\u00e7\u00e3o que mant\u00e9m o p\u00fablico engajado sem sacrificar alcance.",
+        ariaLabel: "Gr\u00e1fico de dispers\u00e3o de dura\u00e7\u00e3o versus reten\u00e7\u00e3o",
+        durationAxis: "Dura\u00e7\u00e3o (minutos)",
+        completionAxis: "Taxa de conclus\u00e3o",
         episodePrefix: "Ep.",
       },
       audienceMix: {
-        title: "3. Mix de audiência",
-        note: "Uma visão empilhada dos 12 episódios mais recentes mostra se o crescimento vem de descoberta ou de ouvintes leais.",
-        ariaLabel: "Gráfico de mix de audiência",
+        title: "3. Mix de audi\u00eancia",
+        note: "Uma vis\u00e3o empilhada dos 12 epis\u00f3dios mais recentes mostra se o crescimento vem de descoberta ou de ouvintes leais.",
+        ariaLabel: "Gr\u00e1fico de mix de audi\u00eancia",
       },
       topicLeaderboard: {
         title: "4. Ranking de temas",
-        note: "A média de downloads por tema mostra quais linhas editoriais merecem mais frequência.",
-        ariaLabel: "Gráfico de ranking de temas",
+        note: "A m\u00e9dia de downloads por tema mostra quais linhas editoriais merecem mais frequ\u00eancia.",
+        ariaLabel: "Gr\u00e1fico de ranking de temas",
       },
       shareToSubscribers: {
         title: "5. Compartilhamentos para inscritos",
-        note: "Episódios no canto superior direito são os melhores candidatos para distribuição de cortes e promoção.",
-        ariaLabel: "Gráfico de bolhas de compartilhamentos para inscritos",
+        note: "Epis\u00f3dios no canto superior direito s\u00e3o os melhores candidatos para distribui\u00e7\u00e3o de cortes e promo\u00e7\u00e3o.",
+        ariaLabel: "Gr\u00e1fico de bolhas de compartilhamentos para inscritos",
         episodePrefix: "Ep.",
       },
       bestConversionEpisodes: {
-        title: "6. Melhores episódios em conversão",
-        note: "Este ranking isola os episódios que transformam atenção em inscritos com mais eficiência.",
-        ariaLabel: "Gráfico de ranking dos melhores episódios em conversão",
+        title: "6. Melhores epis\u00f3dios em convers\u00e3o",
+        note: "Este ranking isola os epis\u00f3dios que transformam aten\u00e7\u00e3o em inscritos com mais efici\u00eancia.",
+        ariaLabel: "Gr\u00e1fico de ranking dos melhores epis\u00f3dios em convers\u00e3o",
         episodePrefix: "Ep.",
       },
     },
     taxonomy: {
       topics: {
-        "Machine Learning": "Aprendizado de Máquina",
+        "Machine Learning": "Aprendizado de M\u00e1quina",
         Agents: "Agentes",
-        Robotics: "Robótica",
-        Cybersecurity: "Cibersegurança",
+        Robotics: "Rob\u00f3tica",
+        Cybersecurity: "Ciberseguran\u00e7a",
         "Cloud & Infrastructure": "Cloud e Infraestrutura",
-        Automation: "Automação",
+        Automation: "Automa\u00e7\u00e3o",
         Other: "Outros",
       },
       guestTypes: {
-        "Panel / multi-guest": "painel ou múltiplos convidados",
-        "Single guest": "convidado único",
+        "Panel / multi-guest": "painel ou m\u00faltiplos convidados",
+        "Single guest": "convidado \u00fanico",
       },
       durationBands: {
         "<29 min": "menos de 29 min",
@@ -318,7 +319,8 @@ const translations = {
   },
 };
 
-export const getLocaleCopy = (locale) => translations[locale] ?? translations[DEFAULT_LOCALE];
+export const getLocaleCopy = (locale) =>
+  translations[locale] ?? translations[DEFAULT_LOCALE];
 
 export const createFormatters = (locale) => {
   const numberFormatter = new Intl.NumberFormat(locale);

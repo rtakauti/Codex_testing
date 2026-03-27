@@ -290,8 +290,17 @@ const fetchRemoteCsv = async () => {
   };
 };
 
+export const podcastDataTestUtils = {
+  durationBand,
+  parseDuration,
+  inferTopic,
+  buildDashboardData,
+  readRemoteCache,
+  writeRemoteCache,
+  fetchRemoteCsv,
+};
+
 export async function loadPodcastDashboardData() {
-  const fallbackData = buildDashboardData(csvText, "local-file");
   const cachedRemote = readRemoteCache();
 
   if (cachedRemote && Date.now() - cachedRemote.fetchedAt < REMOTE_CACHE_TTL_MS) {
@@ -303,7 +312,7 @@ export async function loadPodcastDashboardData() {
     writeRemoteCache(remoteResult.csvText);
     return buildDashboardData(remoteResult.csvText, remoteResult.source);
   } catch {
-    return fallbackData;
+    return buildDashboardData(csvText, "local-file-fallback");
   }
 }
 

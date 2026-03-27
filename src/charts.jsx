@@ -31,6 +31,10 @@ const chartFrame = (node, { width = 720, height = 320, margin, ariaLabel }) => {
   return { g, innerWidth, innerHeight };
 };
 
+export const chartTestUtils = {
+  chartFrame,
+};
+
 export function PerformanceTrendChart({ data, labels, formatters }) {
   const ref = useChart(
     (node) => {
