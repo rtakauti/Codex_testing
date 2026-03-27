@@ -4,9 +4,13 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
+  "workspaceFolder": "/workspaces/poddata",
   "remoteUser": "node",
   "updateRemoteUserUID": true,
   "postCreateCommand": "npm ci",
+  "mounts": [
+    "source=poddata-node-modules,target=/workspaces/poddata/node_modules,type=volume"
+  ],
   "customizations": {
     "vscode": {
       "settings": {
