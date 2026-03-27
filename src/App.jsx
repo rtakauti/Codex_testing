@@ -123,6 +123,7 @@ const buildChartCards = (podcastData, topicPerformance, topicColors, copy, forma
   {
     title: copy.charts.growthTrend.title,
     note: copy.charts.growthTrend.note,
+    interactionHint: copy.charts.growthTrend.interactionHint,
     component: (
       <PerformanceTrendChart
         data={podcastData}
@@ -134,6 +135,7 @@ const buildChartCards = (podcastData, topicPerformance, topicColors, copy, forma
   {
     title: copy.charts.retentionScatter.title,
     note: copy.charts.retentionScatter.note,
+    interactionHint: copy.charts.retentionScatter.interactionHint,
     component: (
       <RetentionScatterChart
         data={podcastData}
@@ -146,6 +148,7 @@ const buildChartCards = (podcastData, topicPerformance, topicColors, copy, forma
   {
     title: copy.charts.audienceMix.title,
     note: copy.charts.audienceMix.note,
+    interactionHint: copy.charts.audienceMix.interactionHint,
     component: (
       <AudienceMixChart
         data={podcastData}
@@ -157,6 +160,7 @@ const buildChartCards = (podcastData, topicPerformance, topicColors, copy, forma
   {
     title: copy.charts.topicLeaderboard.title,
     note: copy.charts.topicLeaderboard.note,
+    interactionHint: copy.charts.topicLeaderboard.interactionHint,
     component: (
       <TopicBarChart
         data={topicPerformance}
@@ -170,6 +174,7 @@ const buildChartCards = (podcastData, topicPerformance, topicColors, copy, forma
   {
     title: copy.charts.shareToSubscribers.title,
     note: copy.charts.shareToSubscribers.note,
+    interactionHint: copy.charts.shareToSubscribers.interactionHint,
     component: (
       <ConversionBubbleChart
         data={podcastData}
@@ -182,6 +187,7 @@ const buildChartCards = (podcastData, topicPerformance, topicColors, copy, forma
   {
     title: copy.charts.bestConversionEpisodes.title,
     note: copy.charts.bestConversionEpisodes.note,
+    interactionHint: copy.charts.bestConversionEpisodes.interactionHint,
     component: (
       <ConversionRankingChart
         data={podcastData}
@@ -354,6 +360,7 @@ export default function App() {
               <div>
                 <h2>{card.title}</h2>
                 <p>{card.note}</p>
+                <span className="chart-card__hint">{card.interactionHint}</span>
               </div>
             </div>
             {card.component}

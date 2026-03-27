@@ -290,6 +290,64 @@ h1 {
   margin-bottom: 8px;
 }
 
+.chart-card__hint {
+  display: inline-block;
+  margin-top: 10px;
+  color: #ffd166;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.chart-frame {
+  display: grid;
+  gap: 12px;
+}
+
+.chart-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chart-toolbar p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.chart-toolbar__buttons {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chart-toolbar__buttons button {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3f5f7;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.chart-toolbar__buttons button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 209, 102, 0.35);
+  transform: translateY(-1px);
+}
+
+.chart-shell {
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+}
+
 .chart-shell svg {
   width: 100%;
   height: auto;
@@ -332,5 +390,9 @@ h1 {
 
   .hero-highlights {
     grid-template-columns: 1fr;
+  }
+
+  .chart-toolbar {
+    align-items: flex-start;
   }
 }

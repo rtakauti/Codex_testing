@@ -6,6 +6,9 @@ const coverageDir = path.resolve(".nyc_output");
 const csvFixturePath = path.resolve("data/data.csv");
 const localeStorageKey = "poddata:locale";
 const remoteCacheKey = "poddata:remote-csv-cache";
+const portugueseLabel = "Português (Brasil)";
+const portugueseGrowthLabel = "Gráfico de tendência de crescimento";
+const portugueseRecommendationLabel = "Recomendações editoriais";
 
 const persistCoverage = async (page, testInfo) => {
   const coverage = await page.evaluate(() => window.__coverage__ ?? null);
@@ -47,7 +50,7 @@ test("renders the dashboard in English and switches to Portuguese", async ({ pag
   await expect(page.getByRole("img", { name: "Growth trend chart" })).toBeVisible();
   await expect(page.getByRole("img")).toHaveCount(6);
 
-  await page.getByRole("button", { name: "Português (Brasil)" }).click();
+  await page.getByRole("button", { name: portugueseLabel }).click();
 
   await expect(
     page.getByRole("heading", {
@@ -59,10 +62,10 @@ test("renders the dashboard in English and switches to Portuguese", async ({ pag
     page.getByText("Usando o feed CSV remoto e sincronizando data/data.csv"),
   ).toBeVisible();
   await expect(
-    page.getByRole("img", { name: "Gráfico de tendência de crescimento" }),
+    page.getByRole("img", { name: portugueseGrowthLabel }),
   ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
-  await expect(page.getByText("Recomendações editoriais")).toBeVisible();
+  await expect(page.getByText(portugueseRecommendationLabel)).toBeVisible();
 
   const storedLocale = await page.evaluate(
     ({ key }) => window.localStorage.getItem(key),
@@ -110,7 +113,7 @@ test("uses cached remote data and restores the stored locale", async ({ page }) 
   await expect(
     page.getByText("Usando dados remotos em cache dos últimos 30 minutos"),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Português (Brasil)" })).toHaveClass(
+  await expect(page.getByRole("button", { name: portugueseLabel })).toHaveClass(
     /is-active/,
   );
 });
@@ -235,6 +238,54 @@ test("covers app helper branches for fallback labels and chart defaults", async 
   expect(helperResults.frameWidth).toBe(720);
   expect(helperResults.frameHeight).toBe(320);
   expect(helperResults.svgCount).toBe(1);
+});
+
+test("lets users zoom, pan, and reset the growth chart", async ({ page }) => {
+  const csvText = await readFile(csvFixturePath, "utf8");
+
+  await page.route("**/api/podcast-data", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/csv; charset=utf-8",
+      headers: {
+        "X-Poddata-Source": "remote-url",
+      },
+      body: csvText,
+    });
+  });
+
+  await page.goto("/");
+
+  const chartCard = page.locator(".chart-card").filter({
+    has: page.getByRole("heading", { name: "1. Growth trend" }),
+  });
+  const chartShell = chartCard.locator(".chart-shell");
+
+  await expect(chartCard.locator(".chart-card__hint")).toContainText(
+    "Zoom with the toolbar or mouse wheel, then drag to pan.",
+  );
+  await expect(chartShell).toHaveAttribute("data-zoom-scale", "1");
+
+  await chartCard.getByRole("button", { name: "Zoom in" }).click();
+  await expect.poll(() => chartShell.getAttribute("data-zoom-scale")).not.toBe("1");
+
+  const box = await chartShell.boundingBox();
+  expect(box).not.toBeNull();
+  const startX = box.x + box.width * 0.7;
+  const startY = box.y + box.height * 0.5;
+  const beforePanX = await chartShell.getAttribute("data-zoom-x");
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX - 80, startY, { steps: 8 });
+  await page.mouse.up();
+
+  await expect.poll(() => chartShell.getAttribute("data-zoom-x")).not.toBe(beforePanX);
+
+  await chartCard.getByRole("button", { name: "Reset view" }).click();
+  await expect(chartShell).toHaveAttribute("data-zoom-scale", "1");
+  await expect(chartShell).toHaveAttribute("data-zoom-x", "0");
+  await expect(chartShell).toHaveAttribute("data-zoom-y", "0");
 });
 
 test("covers podcast data helper branches for cache parsing and remote responses", async ({
