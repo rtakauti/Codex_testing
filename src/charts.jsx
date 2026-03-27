@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
 const ZOOM_STEP = 1.35;
@@ -135,13 +135,18 @@ export const chartTestUtils = {
 const ChartSurface = ({ draw, dependencies, labels }) => {
   const shellRef = useRef(null);
   const controlsRef = useRef(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (!shellRef.current) return undefined;
-    controlsRef.current = draw(shellRef.current);
+
+    const controls = draw(shellRef.current);
+    controlsRef.current = controls;
+    setIsReady(true);
 
     return () => {
       controlsRef.current = null;
+      setIsReady(false);
     };
   }, dependencies);
 
@@ -150,13 +155,25 @@ const ChartSurface = ({ draw, dependencies, labels }) => {
       <div className="chart-toolbar">
         <p>{labels.interactionHint}</p>
         <div className="chart-toolbar__buttons">
-          <button type="button" onClick={() => controlsRef.current?.zoomOut()}>
+          <button
+            type="button"
+            disabled={!isReady}
+            onClick={() => controlsRef.current?.zoomOut()}
+          >
             {labels.zoomOut}
           </button>
-          <button type="button" onClick={() => controlsRef.current?.zoomIn()}>
+          <button
+            type="button"
+            disabled={!isReady}
+            onClick={() => controlsRef.current?.zoomIn()}
+          >
             {labels.zoomIn}
           </button>
-          <button type="button" onClick={() => controlsRef.current?.reset()}>
+          <button
+            type="button"
+            disabled={!isReady}
+            onClick={() => controlsRef.current?.reset()}
+          >
             {labels.resetZoom}
           </button>
         </div>
