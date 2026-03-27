@@ -1,11 +1,14 @@
 {
   "name": "poddata",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React 19 + D3 podcast analytics dashboard",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "watch": "vite build --watch",
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "coverage:e2e": "playwright test && node scripts/mergeCoverage.js"
   },
   "keywords": [],
   "author": "",
@@ -13,11 +16,13 @@
   "type": "module",
   "dependencies": {
     "d3": "^7.9.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@vitejs/plugin-react": "^6.0.1",
-    "vite": "^8.0.2"
+    "vite": "^8.0.2",
+    "vite-plugin-istanbul": "^8.0.0"
   }
 }

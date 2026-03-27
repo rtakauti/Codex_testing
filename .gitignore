@@ -1,6 +1,12 @@
 node_modules/
 dist/
 .vite/
+output/
+tmp/
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
 *.log
 .DS_Store
 Thumbs.db
