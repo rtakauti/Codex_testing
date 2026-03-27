@@ -1,6 +1,6 @@
 {
   "name": "poddata",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React 19 + D3 podcast analytics dashboard",
   "scripts": {
     "dev": "vite",
