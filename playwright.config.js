@@ -9,8 +9,10 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command:
-      "VITE_COVERAGE=true npm run build && npm run preview -- --host 127.0.0.1 --port 4173",
+    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4173",
+    env: {
+      VITE_COVERAGE: "true",
+    },
     url: "http://127.0.0.1:4173",
     reuseExistingServer: false,
     timeout: 120000,
