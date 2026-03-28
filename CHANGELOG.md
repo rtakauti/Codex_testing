@@ -11,6 +11,7 @@ The format is inspired by Keep a Changelog and reflects the Git history of this 
 - Stabilized the Dev Container startup flow by simplifying the container configuration.
 - Added an explicit workspace folder and a dedicated Docker volume for `node_modules` inside the Dev Container.
 - Fixed Playwright `webServer` startup on Windows by moving `VITE_COVERAGE` to the process environment instead of shell-specific inline syntax.
+- Hotfix: charts now apply dynamic tick recalculation for zoom and keep axis visuals stable (TradeView-like behavior).
 
 ### Changed
 
