@@ -240,13 +240,13 @@ test("covers app helper branches for fallback labels and chart defaults", async 
   expect(helperResults.svgCount).toBe(1);
 });
 
-test.skip("covers interactive chart zoom controls", async ({ page }) => {
+test("covers interactive chart zoom controls", async ({ page }) => {
   await page.goto("/");
   await expect
     .poll(() => page.evaluate(() => Boolean(window.__poddataTestUtils__)))
     .toBe(true);
 
-  const zoomResults = await page.evaluate(() => {
+  const zoomResults = await page.evaluate(async () => {
     const { chartTestUtils } = window.__poddataTestUtils__;
     const node = document.createElement("div");
 
@@ -258,9 +258,21 @@ test.skip("covers interactive chart zoom controls", async ({ page }) => {
         margin: { top: 12, right: 12, bottom: 12, left: 12 },
         ariaLabel: "Interactive test chart",
       },
-      ({ contentLayer }) => {
+      ({ axesLayer, contentLayer, innerHeight }) => {
+        axesLayer
+          .append("g")
+          .attr("class", "test-axis")
+          .attr("transform", `translate(0,${innerHeight})`)
+          .append("line")
+          .attr("x1", 0)
+          .attr("x2", 220)
+          .attr("y1", 0)
+          .attr("y2", 0)
+          .attr("stroke", "#94a3b8");
+
         contentLayer
           .append("circle")
+          .attr("class", "test-dot")
           .attr("cx", 120)
           .attr("cy", 90)
           .attr("r", 16)
@@ -270,14 +282,21 @@ test.skip("covers interactive chart zoom controls", async ({ page }) => {
 
     const initialScale = node.dataset.zoomScale;
     controls.zoomIn();
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
     const afterZoomInScale = node.dataset.zoomScale;
+    const axisTransformAfterZoomIn = node.querySelector(".chart-axes").getAttribute("transform");
+    const contentTransformAfterZoomIn = node.querySelector(".chart-content").getAttribute("transform");
     controls.zoomOut();
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
     const afterZoomOutScale = node.dataset.zoomScale;
     controls.reset();
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
 
     return {
       initialScale,
       afterZoomInScale,
+      axisTransformAfterZoomIn,
+      contentTransformAfterZoomIn,
       afterZoomOutScale,
       resetScale: node.dataset.zoomScale,
       resetX: node.dataset.zoomX,
@@ -287,6 +306,10 @@ test.skip("covers interactive chart zoom controls", async ({ page }) => {
 
   expect(zoomResults.initialScale).toBe("1");
   expect(zoomResults.afterZoomInScale).not.toBe("1");
+  // Axis should remain static for TradeView-like behavior; only content transforms
+  expect(zoomResults.axisTransformAfterZoomIn).toBeNull();
+  expect(zoomResults.contentTransformAfterZoomIn).not.toBeNull();
+  expect(zoomResults.contentTransformAfterZoomIn).not.toBe("");
   expect(zoomResults.afterZoomOutScale).toBe("1");
   expect(zoomResults.resetScale).toBe("1");
   expect(zoomResults.resetX).toBe("0");

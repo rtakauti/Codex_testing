@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
-const ZOOM_STEP = 1.35;
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 4;
+const ZOOM_STEP = 1.2;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 10;
 
 const useChart = (draw, dependencies) => {
   const ref = useRef(null);
@@ -71,6 +71,8 @@ const createInteractiveChart = (node, config, renderContent) => {
   const axesLayer = root.append("g").attr("class", "chart-axes");
   const viewport = root.append("g").attr("clip-path", `url(#${clipId})`);
   const contentLayer = viewport.append("g").attr("class", "chart-content");
+
+  let axisUpdater = null;
   const interactionLayer = root
     .append("rect")
     .attr("class", "chart-interaction-layer")
@@ -94,8 +96,10 @@ const createInteractiveChart = (node, config, renderContent) => {
       interactionLayer.style("cursor", "grabbing");
     })
     .on("zoom", (event) => {
+      // keep axis container fixed, content scales; axis ticks get redrawn via updater
       contentLayer.attr("transform", event.transform.toString());
       setZoomAttributes(node, event.transform);
+      if (axisUpdater) axisUpdater(event.transform);
     })
     .on("end", () => {
       interactionLayer.style("cursor", "grab");
@@ -103,7 +107,7 @@ const createInteractiveChart = (node, config, renderContent) => {
 
   interactionLayer.call(zoom);
 
-  renderContent({
+  axisUpdater = renderContent({
     axesLayer,
     contentLayer,
     innerWidth,
@@ -115,12 +119,21 @@ const createInteractiveChart = (node, config, renderContent) => {
   };
 
   setTransform(d3.zoomIdentity);
+  if (axisUpdater) axisUpdater(d3.zoomIdentity);
+
+  const center = [innerWidth / 2, innerHeight / 2];
 
   return {
     zoomIn: () =>
-      interactionLayer.transition().duration(180).call(zoom.scaleBy, ZOOM_STEP),
+      interactionLayer
+        .transition()
+        .duration(180)
+        .call(zoom.scaleBy, ZOOM_STEP, center),
     zoomOut: () =>
-      interactionLayer.transition().duration(180).call(zoom.scaleBy, 1 / ZOOM_STEP),
+      interactionLayer
+        .transition()
+        .duration(180)
+        .call(zoom.scaleBy, 1 / ZOOM_STEP, center),
     reset: () =>
       interactionLayer.transition().duration(180).call(zoom.transform, d3.zoomIdentity),
   };
@@ -208,10 +221,20 @@ export function PerformanceTrendChart({ data, labels, formatters }) {
               .nice()
               .range([innerHeight, 0]);
 
-            axesLayer.append("g").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(10).tickFormat(d3.format("d")));
-            axesLayer.append("g").call(d3.axisLeft(y).ticks(6).tickFormat((value) => formatters.compact(value)));
-            axesLayer
+            const xAxis = axesLayer
               .append("g")
+              .attr("class", "x-axis")
+              .attr("transform", `translate(0,${innerHeight})`)
+              .call(d3.axisBottom(x).ticks(10).tickFormat(d3.format("d")));
+
+            const yAxis = axesLayer
+              .append("g")
+              .attr("class", "y-axis")
+              .call(d3.axisLeft(y).ticks(6).tickFormat((value) => formatters.compact(value)));
+
+            const yRightAxis = axesLayer
+              .append("g")
+              .attr("class", "y-right-axis")
               .attr("transform", `translate(${innerWidth},0)`)
               .call(d3.axisRight(yRight).ticks(6).tickFormat((value) => formatters.compact(value)));
 
@@ -241,6 +264,13 @@ export function PerformanceTrendChart({ data, labels, formatters }) {
               row.append("line").attr("x1", 0).attr("x2", 26).attr("y1", 0).attr("y2", 0).attr("stroke", item.color).attr("stroke-width", 3);
               row.append("text").attr("x", 34).attr("y", 4).text(item.label);
             });
+
+            return (transform) => {
+              xAxis.call(d3.axisBottom(transform.rescaleX(x)).ticks(10).tickFormat(d3.format("d")));
+              yAxis.call(d3.axisLeft(transform.rescaleY(y)).ticks(6).tickFormat((value) => formatters.compact(value)));
+              yRightAxis
+                .call(d3.axisRight(transform.rescaleY(yRight)).ticks(6).tickFormat((value) => formatters.compact(value)));
+            };
           },
         )
       }
@@ -262,8 +292,16 @@ export function RetentionScatterChart({ data, colors, labels, formatters }) {
             const y = d3.scaleLinear().domain([0.45, d3.max(data, (item) => item.completionRate)]).nice().range([innerHeight, 0]);
             const r = d3.scaleSqrt().domain(d3.extent(data, (item) => item.downloads)).range([4, 16]);
 
-            axesLayer.append("g").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(8).tickFormat((value) => formatters.number(value)));
-            axesLayer.append("g").call(d3.axisLeft(y).ticks(6).tickFormat((value) => formatters.percent(value)));
+            const xAxis = axesLayer
+              .append("g")
+              .attr("class", "x-axis")
+              .attr("transform", `translate(0,${innerHeight})`)
+              .call(d3.axisBottom(x).ticks(8).tickFormat((value) => formatters.number(value)));
+
+            const yAxis = axesLayer
+              .append("g")
+              .attr("class", "y-axis")
+              .call(d3.axisLeft(y).ticks(6).tickFormat((value) => formatters.percent(value)));
 
             contentLayer
               .append("g")
@@ -281,6 +319,11 @@ export function RetentionScatterChart({ data, colors, labels, formatters }) {
 
             axesLayer.append("text").attr("x", innerWidth / 2).attr("y", innerHeight + 38).attr("text-anchor", "middle").text(labels.durationAxis);
             axesLayer.append("text").attr("transform", "rotate(-90)").attr("x", -innerHeight / 2).attr("y", -40).attr("text-anchor", "middle").text(labels.completionAxis);
+
+            return (transform) => {
+              xAxis.call(d3.axisBottom(transform.rescaleX(x)).ticks(8).tickFormat((value) => formatters.number(value)));
+              yAxis.call(d3.axisLeft(transform.rescaleY(y)).ticks(6).tickFormat((value) => formatters.percent(value)));
+            };
           },
         )
       }
@@ -307,8 +350,16 @@ export function AudienceMixChart({ data, labels, formatters }) {
               .nice()
               .range([innerHeight, 0]);
 
-            axesLayer.append("g").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
-            axesLayer.append("g").call(d3.axisLeft(y).ticks(6).tickFormat((value) => formatters.compact(value)));
+            const xAxis = axesLayer
+              .append("g")
+              .attr("class", "x-axis")
+              .attr("transform", `translate(0,${innerHeight})`)
+              .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+            const yAxis = axesLayer
+              .append("g")
+              .attr("class", "y-axis")
+              .call(d3.axisLeft(y).ticks(6).tickFormat((value) => formatters.compact(value)));
 
             contentLayer
               .append("g")
@@ -323,6 +374,12 @@ export function AudienceMixChart({ data, labels, formatters }) {
               .attr("y", (item) => y(item[1]))
               .attr("height", (item) => y(item[0]) - y(item[1]))
               .attr("width", x.bandwidth());
+
+            return (transform) => {
+              const transformedX = x.bandwidth ? x : transform.rescaleX(x);
+              xAxis.call(d3.axisBottom(transformedX).tickFormat(d3.format("d")));
+              yAxis.call(d3.axisLeft(transform.rescaleY(y)).ticks(6).tickFormat((value) => formatters.compact(value)));
+            };
           },
         )
       }
@@ -343,8 +400,16 @@ export function TopicBarChart({ data, colors, labels, formatters, getTopicLabel 
             const x = d3.scaleLinear().domain([0, d3.max(data, (item) => item.avgDownloads)]).nice().range([0, innerWidth]);
             const y = d3.scaleBand().domain(data.map((item) => item.topic)).range([0, innerHeight]).padding(0.22);
 
-            axesLayer.append("g").call(d3.axisLeft(y).tickFormat((topic) => getTopicLabel(topic)));
-            axesLayer.append("g").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6).tickFormat((value) => formatters.compact(value)));
+            const yAxis = axesLayer
+              .append("g")
+              .attr("class", "y-axis")
+              .call(d3.axisLeft(y).tickFormat((topic) => getTopicLabel(topic)));
+
+            const xAxis = axesLayer
+              .append("g")
+              .attr("class", "x-axis")
+              .attr("transform", `translate(0,${innerHeight})`)
+              .call(d3.axisBottom(x).ticks(6).tickFormat((value) => formatters.compact(value)));
 
             contentLayer
               .selectAll("rect")
@@ -365,6 +430,11 @@ export function TopicBarChart({ data, colors, labels, formatters, getTopicLabel 
               .attr("x", (item) => x(item.avgDownloads) + 8)
               .attr("y", (item) => y(item.topic) + y.bandwidth() / 2 + 4)
               .text((item) => formatters.number(Math.round(item.avgDownloads)));
+
+            return (transform) => {
+              xAxis.call(d3.axisBottom(transform.rescaleX(x)).ticks(6).tickFormat((value) => formatters.compact(value)));
+              yAxis.call(d3.axisLeft(y).tickFormat((topic) => getTopicLabel(topic)));
+            };
           },
         )
       }
@@ -386,8 +456,16 @@ export function ConversionBubbleChart({ data, colors, labels, formatters }) {
             const y = d3.scaleLinear().domain([0, d3.max(data, (item) => item.subscribersGained)]).nice().range([innerHeight, 0]);
             const r = d3.scaleSqrt().domain(d3.extent(data, (item) => item.downloads)).range([4, 18]);
 
-            axesLayer.append("g").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6).tickFormat((value) => formatters.compact(value)));
-            axesLayer.append("g").call(d3.axisLeft(y).ticks(6).tickFormat((value) => formatters.compact(value)));
+            const xAxis = axesLayer
+              .append("g")
+              .attr("class", "x-axis")
+              .attr("transform", `translate(0,${innerHeight})`)
+              .call(d3.axisBottom(x).ticks(6).tickFormat((value) => formatters.compact(value)));
+
+            const yAxis = axesLayer
+              .append("g")
+              .attr("class", "y-axis")
+              .call(d3.axisLeft(y).ticks(6).tickFormat((value) => formatters.compact(value)));
 
             contentLayer
               .selectAll("circle")
@@ -401,6 +479,11 @@ export function ConversionBubbleChart({ data, colors, labels, formatters }) {
               .attr("stroke", "#08111f")
               .append("title")
               .text((item) => `${labels.episodePrefix} ${item.episode}: ${item.title}`);
+
+            return (transform) => {
+              xAxis.call(d3.axisBottom(transform.rescaleX(x)).ticks(6).tickFormat((value) => formatters.compact(value)));
+              yAxis.call(d3.axisLeft(transform.rescaleY(y)).ticks(6).tickFormat((value) => formatters.compact(value)));
+            };
           },
         )
       }
@@ -425,8 +508,16 @@ export function ConversionRankingChart({ data, labels, formatters }) {
             const x = d3.scaleLinear().domain([0, d3.max(top, (item) => item.subscriberConversion)]).nice().range([0, innerWidth]);
             const y = d3.scaleBand().domain(top.map((item) => `${labels.episodePrefix} ${item.episode}`)).range([innerHeight, 0]).padding(0.4);
 
-            axesLayer.append("g").call(d3.axisLeft(y));
-            axesLayer.append("g").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6).tickFormat((value) => formatters.percent(value)));
+            const yAxis = axesLayer
+              .append("g")
+              .attr("class", "y-axis")
+              .call(d3.axisLeft(y));
+
+            const xAxis = axesLayer
+              .append("g")
+              .attr("class", "x-axis")
+              .attr("transform", `translate(0,${innerHeight})`)
+              .call(d3.axisBottom(x).ticks(6).tickFormat((value) => formatters.percent(value)));
 
             contentLayer
               .selectAll("line.rank")
@@ -449,6 +540,11 @@ export function ConversionRankingChart({ data, labels, formatters }) {
               .attr("cy", (item) => y(`${labels.episodePrefix} ${item.episode}`) + y.bandwidth() / 2)
               .attr("r", 7)
               .attr("fill", "#ff6b3d");
+
+            return (transform) => {
+              xAxis.call(d3.axisBottom(transform.rescaleX(x)).ticks(6).tickFormat((value) => formatters.percent(value)));
+              yAxis.call(d3.axisLeft(y));
+            };
           },
         )
       }
